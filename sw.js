@@ -1,4 +1,4 @@
-const CACHE='nokia-os-v03';
+const CACHE='nokia-os-v04';
 const STATIC=['./manifest.webmanifest','./icon-180.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   self.skipWaiting();
