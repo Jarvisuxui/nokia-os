@@ -1,5 +1,25 @@
-const CACHE='nokia-os-v02';
-const FILES=['./','./index.html','./manifest.webmanifest','./icon-180.png','./icon-512.png'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES))));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));
-self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+const CACHE='nokia-os-v03';
+const STATIC=['./manifest.webmanifest','./icon-180.png','./icon-512.png'];
+self.addEventListener('install',event=>{
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(STATIC)));
+});
+self.addEventListener('activate',event=>{
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+self.addEventListener('fetch',event=>{
+  const req=event.request;
+  if(req.mode==='navigate' || new URL(req.url).pathname.endsWith('/index.html')){
+    event.respondWith(fetch(req,{cache:'no-store'}).catch(()=>caches.match('./index.html')));
+    return;
+  }
+  event.respondWith(caches.match(req).then(cached=>cached||fetch(req).then(resp=>{
+    const copy=resp.clone();
+    caches.open(CACHE).then(cache=>cache.put(req,copy));
+    return resp;
+  })));
+});
